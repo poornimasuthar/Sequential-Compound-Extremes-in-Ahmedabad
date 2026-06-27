@@ -1,39 +1,39 @@
-# Ahmedabad Hot-and-Polluted Episodes (HPE) Analysis
 
-## Overview
-Characterization of compound hot-and-polluted episodes in Ahmedabad, India, 
-using satellite-derived PM2.5, land surface temperature (LST), and ERA5 reanalysis.
+## Figures
 
-**Methodology:** Yim et al. (2025) HPE definition + GBD 2015 IER + GWR
+| Figure | Description | File |
+|--------|-------------|------|
+| 1 | CAMS vs MERRA-2 daily time series | `fig1_pm25_comparison.png` |
+| 2 | PM2.5 and excess deaths spatial maps | `fig2_ier_map.png` |
+| 3 | IER cause-specific attributable deaths | `fig3_ier_bars.png` |
+| 4 | GWR spatial coefficients and hotspots | `fig4_gwr_spatial.png` |
+| 5 | Combined 4-panel publication figure | `fig5_combined_publication.png` |
 
-## Project Structure
+## Technical Skills Demonstrated
 
-## Data Sources
-| Data | Source | File |
-|------|--------|------|
-| PM2.5 | CAMS Reanalysis (Copernicus ADS) | `data/cams_pm25_ahmedabad_2019.nc` |
-| Temperature | ERA5 (Copernicus CDS) | `data/era5_ahmedabad_2019.nc` |
-| LST | Landsat 8/9 (Google Earth Engine) | `data/Ahmedabad_LST_*.tif` |
-| Population | WorldPop 2020 (GEE) | `data/Ahmedabad_Population.tif` |
-| Mortality | GBD 2019 (IHME) | `data/gbd_2019_india.csv` |
+- **Data processing:** xarray, pandas, NetCDF handling
+- **Satellite data:** CAMS, MERRA-2, ERA5 APIs
+- **Spatial analysis:** GWR, interpolation, grid alignment
+- **Health modeling:** IER, attributable fraction, excess deaths
+- **Visualization:** matplotlib, publication-quality figures
+- **Version control:** Git, reproducible workflows
 
-## Installation
-```bash
-python -m venv venv
-venv\Scripts\activate.bat
-pip install -r requirements.txt
-python scripts/01_download_era5.py
-python scripts/02_download_cams.py
+## Limitations & Future Work
 
-**Save** (Ctrl+S)
+1. **Population distribution:** Uniform grid allocation; future work will use ward-level Census 2011 data
+2. **Temperature downscaling:** ERA5 coarse resolution (25 km); future work will use MODIS LST or WRF
+3. **HPE detection:** 0 days found due to inverse seasonality; future work will examine compound cold-PM extremes
+4. **Uncertainty:** Monte Carlo simulation for IER confidence intervals not implemented
+5. **Validation:** No ground-based PM2.5 measurements available for Ahmedabad in 2019
 
----
+## References
 
-## 2. Create `requirements.txt`
+- Burnett, R.T., et al. (2014). An integrated risk function for estimating the global burden of disease attributable to ambient fine particulate matter exposure. *Environmental Health Perspectives*, 122(4), 397-403.
+- van Donkelaar, A., et al. (2021). Monthly Global Estimates of Fine Particulate Matter and Their Uncertainty. *Environmental Science & Technology*.
+- Hersbach, H., et al. (2020). The ERA5 global reanalysis. *Quarterly Journal of the Royal Meteorological Society*, 146(730), 1999-2049.
 
-**In VS Code Terminal (Command Prompt with venv):**
-```cmd
-cd C:\Users\Poornima Suthar\ahmedabad_hpe_project
-venv\Scripts\activate.bat
-pip freeze > requirements.txt
+## Contact
 
+Poornima Suthar  
+Email: [poornimajk2019@gmail.com]  
+GitHub: [https://github.com/poornimasuthar]
