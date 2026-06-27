@@ -4,7 +4,7 @@ Ahmedabad HPE Project - Step 4: Process Washington U. PM2.5
 Author: Poornima Suthar
 Date: 2026-06-26
 
-Crops global PM2.5 to Ahmedabad and calculates daily/monthly means.
+Crops global PM2.5 to Ahmedabad and calculates monthly means.
 """
 
 import xarray as xr
@@ -30,7 +30,8 @@ def process_pm25():
     OUTPUT_DIR.mkdir(exist_ok=True)
     
     # Find PM2.5 file
-pm25_files = list(DATA_DIR.glob("V5GL05*.nc"))    
+    pm25_files = list(DATA_DIR.glob("V5GL05*.nc"))
+    
     if not pm25_files:
         print("No PM2.5 file found in data/")
         print("Download from: https://sites.wustl.edu/acag/datasets/surface-pm2-5/")
@@ -46,10 +47,11 @@ pm25_files = list(DATA_DIR.glob("V5GL05*.nc"))
     print(f"Dataset dimensions: {ds.dims}")
     print(f"Variables: {list(ds.data_vars)}")
     
-    # Find PM2.5 variable (usually 'PM25' or 'GWRPM25')
+    # Find PM2.5 variable
     pm25_var = None
     for var in ds.data_vars:
-        if 'PM25' in var.upper() or 'PM2.5' in var:
+        var_upper = str(var).upper()
+        if 'PM25' in var_upper or 'PM2.5' in var_upper or 'GWRPM25' in var_upper:
             pm25_var = var
             break
     
@@ -59,13 +61,12 @@ pm25_files = list(DATA_DIR.glob("V5GL05*.nc"))
     
     print(f"Using variable: {pm25_var}")
     
-    # Crop to Ahmedabad
-    print("Cropping to Ahmedabad...")
-    
-    # Handle different coordinate names
+    # Find coordinate names
     lat_name = 'lat' if 'lat' in ds.dims else 'latitude'
     lon_name = 'lon' if 'lon' in ds.dims else 'longitude'
     
+    # Crop to Ahmedabad
+    print("Cropping to Ahmedabad...")
     ds_cropped = ds.sel(
         **{lat_name: slice(BBOX['lat_min'], BBOX['lat_max'])},
         **{lon_name: slice(BBOX['lon_min'], BBOX['lon_max'])}
@@ -76,35 +77,42 @@ pm25_files = list(DATA_DIR.glob("V5GL05*.nc"))
     
     print(f"Cropped dimensions: {pm25.dims}")
     print(f"Shape: {pm25.shape}")
-    print(f"Value range: {pm25.min().values:.1f} to {pm25.max().values:.1f} µg/m³")
+    print(f"Value range: {float(pm25.min().values):.1f} to {float(pm25.max().values):.1f} µg/m³")
     
-    # Calculate monthly means (if daily data)
-    if 'time' in pm25.dims:
-        print("Calculating monthly means...")
-        pm25_monthly = pm25.resample(time='1M').mean()
+    # Check if time dimension exists
+    if 'time' in pm25.dims or 'month' in pm25.dims:
+        print("Dataset has time dimension.")
         
-        # Also keep daily if available
-        pm25_daily = pm25 if len(pm25.time) > 365 else None
+        # If monthly data, keep as is
+        if 'month' in pm25.dims:
+            pm25_monthly = pm25
+        else:
+            # Resample to monthly if daily
+            print("Calculating monthly means...")
+            pm25_monthly = pm25.resample(time='1M').mean()
     else:
+        print("No time dimension found. Treating as single time slice.")
         pm25_monthly = pm25
-        pm25_daily = None
     
-    # Save outputs
+    # Save output
     output_monthly = OUTPUT_DIR / "pm25_monthly_ahmedabad_2019.nc"
     print(f"Saving monthly data to: {output_monthly}")
     pm25_monthly.to_netcdf(output_monthly)
     
-    if pm25_daily is not None:
-        output_daily = OUTPUT_DIR / "pm25_daily_ahmedabad_2019.nc"
-        print(f"Saving daily data to: {output_daily}")
-        pm25_daily.to_netcdf(output_daily)
+    # Also save as annual mean if monthly
+    if len(pm25_monthly.shape) > 2:
+        print("Calculating annual mean...")
+        pm25_annual = pm25_monthly.mean(dim='time' if 'time' in pm25_monthly.dims else 'month')
+        output_annual = OUTPUT_DIR / "pm25_annual_ahmedabad_2019.nc"
+        print(f"Saving annual mean to: {output_annual}")
+        pm25_annual.to_netcdf(output_annual)
     
     # Print summary
     print(f"\n{'='*60}")
     print("PM2.5 PROCESSING COMPLETE")
     print(f"{'='*60}")
-    print(f"Monthly mean range: {pm25_monthly.min().values:.1f} to {pm25_monthly.max().values:.1f} µg/m³")
-    print(f"Monthly mean: {pm25_monthly.mean().values:.1f} µg/m³")
+    print(f"Monthly mean range: {float(pm25_monthly.min().values):.1f} to {float(pm25_monthly.max().values):.1f} µg/m³")
+    print(f"Monthly mean average: {float(pm25_monthly.mean().values):.1f} µg/m³")
     print(f"Grid: {len(pm25_monthly[lat_name])} x {len(pm25_monthly[lon_name])}")
     
     ds.close()

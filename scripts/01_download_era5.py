@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """
-Ahmedabad HPE Project - Step 1: Download ERA5 Data
+Ahmedabad HPE Project - Step 1: Download ERA5 Data (Monthly Chunks)
 Author: Poornima Suthar
 Date: 2026-06-26
 
-Downloads ERA5 reanalysis from Copernicus CDS for Ahmedabad bounding box.
-Variables: 2m temperature, 10m wind (u,v), boundary layer height, relative humidity
+Downloads ERA5 reanalysis in monthly chunks to avoid Copernicus limits.
 """
 
 import os
@@ -15,58 +14,70 @@ from pathlib import Path
 # Configuration
 PROJECT_DIR = Path(__file__).parent.parent
 DATA_DIR = PROJECT_DIR / "data"
-OUTPUT_FILE = DATA_DIR / "era5_ahmedabad_2019.nc"
+BBOX = [23.15, 72.4, 22.9, 72.75]  # [N, W, S, E]
 
-# Ahmedabad bounding box [N, W, S, E]
-BBOX = [23.15, 72.4, 22.9, 72.75]
+# Variables to download
+VARIABLES = [
+    '2m_temperature',
+    '10m_u_component_of_wind',
+    '10m_v_component_of_wind',
+    'boundary_layer_height',
+    'relative_humidity',
+]
 
-def download_era5():
-    """
-    Download ERA5 hourly data for 2019.
-    Requires Copernicus CDS API key (see: https://cds.climate.copernicus.eu/)
-    """
+def download_month(year, month):
+    """Download ERA5 for a single month."""
     
-    # Ensure data directory exists
     DATA_DIR.mkdir(exist_ok=True)
     
-    if OUTPUT_FILE.exists():
-        print(f"File already exists: {OUTPUT_FILE}")
-        print("Skipping download. Delete file to re-download.")
+    output_file = DATA_DIR / f"era5_ahmedabad_{year}_{month:02d}.nc"
+    
+    if output_file.exists():
+        print(f"File already exists: {output_file} — skipping.")
         return
     
-    print("Initializing CDS API client...")
-    print("NOTE: You need to register at https://cds.climate.copernicus.eu/")
-    print("and create a %USERPROFILE%\\.cdsapirc file with your API key.")
+    print(f"\n{'='*60}")
+    print(f"Downloading ERA5 for {year}-{month:02d}...")
+    print(f"{'='*60}")
     
     c = cdsapi.Client()
-    
-    print(f"Downloading ERA5 for Ahmedabad ({BBOX})...")
-    print("This may take 30-60 minutes depending on server load.")
     
     c.retrieve(
         'reanalysis-era5-single-levels',
         {
             'product_type': 'reanalysis',
-            'variable': [
-                '2m_temperature',
-                '10m_u_component_of_wind',
-                '10m_v_component_of_wind',
-                'boundary_layer_height',
-                'relative_humidity',
-            ],
-            'year': '2019',
-            'month': [f"{m:02d}" for m in range(1, 13)],
+            'variable': VARIABLES,
+            'year': str(year),
+            'month': f"{month:02d}",
             'day': [f"{d:02d}" for d in range(1, 32)],
             'time': [f"{h:02d}:00" for h in range(24)],
             'area': BBOX,
             'format': 'netcdf',
         },
-        str(OUTPUT_FILE)
+        str(output_file)
     )
     
-    print(f"Download complete: {OUTPUT_FILE}")
-    print(f"File size: {OUTPUT_FILE.stat().st_size / (1024**2):.1f} MB")
+    print(f"Saved: {output_file}")
+    print(f"Size: {output_file.stat().st_size / (1024**2):.1f} MB")
+
+def main():
+    """Download all months for 2019."""
+    
+    year = 2019
+    
+    for month in range(1, 13):
+        try:
+            download_month(year, month)
+        except Exception as e:
+            print(f"ERROR downloading {year}-{month:02d}: {e}")
+            print("Continuing to next month...")
+            continue
+    
+    print(f"\n{'='*60}")
+    print("All downloads complete!")
+    print(f"Files saved in: {DATA_DIR}")
+    print(f"{'='*60}")
 
 if __name__ == "__main__":
-    download_era5()
+    main()
     
