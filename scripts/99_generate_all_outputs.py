@@ -1,8 +1,3 @@
-#!/usr/bin/env python3
-"""
-MASTER SCRIPT: Generate ALL Project Outputs
-Ahmedabad HPE Project - Complete Pipeline
-"""
 import pandas as pd
 import numpy as np
 import xarray as xr
@@ -20,9 +15,7 @@ out_dir = base / "outputs"
 fig_dir = base / "figures"
 fig_dir.mkdir(exist_ok=True)
 
-# ============================================================================
 # STEP 1: LOAD ALL DATA
-# ============================================================================
 print("\n" + "=" * 70)
 print("STEP 1: LOADING DATA")
 print("=" * 70)
@@ -83,9 +76,8 @@ except:
     ds_ier = None
     print("    IER not available")
 
-# ============================================================================
+
 # STEP 2: THRESHOLDS & HPE/SCE DETECTION
-# ============================================================================
 print("\n" + "=" * 70)
 print("STEP 2: COMPOUND EXTREME DETECTION")
 print("=" * 70)
@@ -142,9 +134,7 @@ pm_z = (pm25_daily - pm25_daily.mean()) / pm25_daily.std()
 t_z = (tmax_daily - tmax_daily.mean()) / tmax_daily.std()
 ceb = float(np.sqrt(pm_z**2 + t_z**2).mean())
 
-# ============================================================================
 # STEP 3: SAVE ALL SUMMARIES
-# ============================================================================
 print("\n" + "=" * 70)
 print("STEP 3: SAVING SUMMARIES")
 print("=" * 70)
@@ -194,9 +184,7 @@ timeline = pd.DataFrame({
 timeline.to_csv(out_dir / "complete_timeline_2019.csv", index=False)
 print(f"    Saved: {out_dir / 'complete_timeline_2019.csv'}")
 
-# ============================================================================
 # STEP 4: GENERATE ALL FIGURES
-# ============================================================================
 print("\n" + "=" * 70)
 print("STEP 4: GENERATING FIGURES")
 print("=" * 70)
@@ -437,9 +425,8 @@ plt.savefig(fig_dir / 'fig6_summary_dashboard.png', dpi=300, bbox_inches='tight'
 plt.close()
 print("    Saved: fig6_summary_dashboard.png")
 
-# ============================================================================
+
 # STEP 5: FINAL SUMMARY
-# ============================================================================
 print("\n" + "=" * 70)
 print("COMPLETE - ALL OUTPUTS GENERATED")
 print("=" * 70)
