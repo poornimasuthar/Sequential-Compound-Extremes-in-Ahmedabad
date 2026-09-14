@@ -1,0 +1,5 @@
+component,deaths,method,note
+A. Chronic PM (annual mean IER),1907,Burnett et al. (2014) annual mean,Baseline burden; NOT caused by SCE
+B. Independent Heat (extreme days),313.0,5% excess per extreme heat day,37 extreme heat days; acute effect
+C. Independent PM Spikes,N/A,Requires daily mortality data + DLNM,IER not validated for daily acute attribution
+D. SCE-Seasonal Sequential,N/A,16 events identified,Synergistic fraction requires DLNM; flagged as future work

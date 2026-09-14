@@ -1,0 +1,18 @@
+{
+  "city": "Ahmedabad",
+  "year": 2019,
+  "analysis_date": "2026-07-15 22:12:54.247541",
+  "traditional_hpe_days": 3,
+  "sce_15day": 7,
+  "sce_30day": 15,
+  "sce_60day": 26,
+  "soi_mean": 0.19807493334249593,
+  "ceb": 1.2743296745551542,
+  "pm75_threshold": 49.45889663696289,
+  "t95_threshold": 41.93302001953125,
+  "pm25_annual_mean": 40.26196799082299,
+  "temp_annual_mean": 33.19429397583008,
+  "high_pm_days": 91,
+  "extreme_temp_days": 19,
+  "key_finding": "Zero traditional HPE days due to inverse seasonality; SCE framework reveals cross-seasonal burden"
+}

@@ -1,0 +1,5 @@
+framework,definition,events,exposure_days,person_exposure_days,pm_extreme_days_captured,heat_extreme_days_captured,note
+HPE (Simultaneous),PM>90th AND T>90th same day,0,0,0,0,0,Conventional definition
+SCE-30,PM>90th then T>90th within 30 days,0,0,0,0,0,Fixed window; FAILS for Ahmedabad
+SCE-90,PM>90th then T>90th within 90 days,15,29,245050000,15,14,Fixed window; captures long lag
+SCE-Seasonal,Winter PM extreme -> Summer heat extreme,16,53,447850000,16,37,Climatologically motivated; RECOMMENDED

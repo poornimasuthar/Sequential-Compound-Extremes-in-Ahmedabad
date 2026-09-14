@@ -1,0 +1,5 @@
+percentile,pm_threshold_ug_m3,t_threshold_C,hpe_days,total_winter_episodes,sce_linked_episodes,linkage_rate_pct,mean_lead_time_days,mean_episode_length_days
+80,111.2,38.2,1,16,9,56.2,62.7,3.9
+85,119.9,39.9,0,17,10,58.8,64.1,2.9
+90,127.8,40.8,0,14,8,57.1,76.0,2.5
+95,137.3,41.9,0,12,4,33.3,98.2,1.5
