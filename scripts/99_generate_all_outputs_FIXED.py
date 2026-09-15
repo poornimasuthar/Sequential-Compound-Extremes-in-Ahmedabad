@@ -1,8 +1,3 @@
-#!/usr/bin/env python3
-"""
-MASTER SCRIPT: Generate ALL Project Outputs - FIXED VERSION
-Handles already-spatially-averaged data (time-only dimension)
-"""
 import pandas as pd
 import numpy as np
 import xarray as xr
@@ -20,9 +15,7 @@ out_dir = base / "outputs"
 fig_dir = base / "figures"
 fig_dir.mkdir(exist_ok=True)
 
-# ============================================================================
-# STEP 1: LOAD ALL DATA
-# ============================================================================
+# Load Data
 print("\n" + "=" * 70)
 print("STEP 1: LOADING DATA")
 print("=" * 70)
@@ -36,7 +29,7 @@ print(f"    Dimensions: {dict(ds_pm.dims)}")
 pm_var = 'pm25' if 'pm25' in ds_pm.data_vars else list(ds_pm.data_vars)[0]
 pm25 = ds_pm[pm_var]
 
-# Already averaged - just convert to pandas
+#pandas conversion
 pm25_daily = pm25.to_pandas()
 pm25_daily.index = pd.to_datetime(pm25_daily.index)
 print(f"    Loaded: {len(pm25_daily)} days, mean={pm25_daily.mean():.1f} ug/m3")
@@ -50,7 +43,7 @@ print(f"    Dimensions: {dict(ds_t.dims)}")
 t_var = 'tmax' if 'tmax' in ds_t.data_vars else list(ds_t.data_vars)[0]
 tmax = ds_t[t_var]
 
-# Check dimensions and handle accordingly
+# dimensions check and handling
 if 'latitude' in tmax.dims and 'longitude' in tmax.dims:
     tmax_daily = tmax.mean(dim=['latitude', 'longitude']).to_pandas()
 elif 'lat' in tmax.dims and 'lon' in tmax.dims:
@@ -67,9 +60,7 @@ pm25_daily = pm25_daily.loc[common]
 tmax_daily = tmax_daily.loc[common]
 print(f"    Aligned: {len(common)} common days")
 
-# ============================================================================
-# STEP 2: THRESHOLDS & HPE/SCE DETECTION
-# ============================================================================
+#THRESHOLDS & HPE/SCE DETECTION
 print("\n" + "=" * 70)
 print("STEP 2: COMPOUND EXTREME DETECTION")
 print("=" * 70)
@@ -129,9 +120,7 @@ pm_z = (pm25_daily - pm25_daily.mean()) / pm25_daily.std()
 t_z = (tmax_daily - tmax_daily.mean()) / tmax_daily.std()
 ceb = float(np.sqrt(pm_z**2 + t_z**2).mean())
 
-# ============================================================================
 # STEP 3: SAVE ALL SUMMARIES
-# ============================================================================
 print("\n" + "=" * 70)
 print("STEP 3: SAVING SUMMARIES")
 print("=" * 70)
@@ -180,9 +169,8 @@ timeline = pd.DataFrame({
 timeline.to_csv(out_dir / "complete_timeline_2019.csv", index=False)
 print(f"    Saved: {out_dir / 'complete_timeline_2019.csv'}")
 
-# ============================================================================
+
 # STEP 4: GENERATE ALL FIGURES
-# ============================================================================
 print("\n" + "=" * 70)
 print("STEP 4: GENERATING FIGURES")
 print("=" * 70)
@@ -389,10 +377,7 @@ plt.suptitle('Ahmedabad HPE Project 2019 - Summary Dashboard', fontsize=14, font
 plt.savefig(fig_dir / 'fig5_summary_dashboard.png', dpi=300, bbox_inches='tight')
 plt.close()
 print("    Saved: fig5_summary_dashboard.png")
-
-# ============================================================================
 # STEP 5: FINAL SUMMARY
-# ============================================================================
 print("\n" + "=" * 70)
 print("COMPLETE - ALL OUTPUTS GENERATED")
 print("=" * 70)
