@@ -1,5 +1,0 @@
-component,deaths,method,note
-A. Chronic PM (annual mean IER),1907.0,Burnett et al. (2014) annual mean,Baseline attributable burden; NOT caused by SCE
-B. Independent Heat (extreme days),313.0,5% excess per extreme heat day (conservative),Acute heat effect; occurs even without PM
-C. Independent PM Spikes (extreme days),0.0,Daily IER minus chronic baseline (sensitivity),Acute PM effect; IER not validated for daily use
-D. SCE-30 Sequential Windows,,0 events identified,Synergistic interaction requires DLNM; not yet quantified

@@ -1,7 +1,0 @@
-window_days,hpe_days,sce_events,sce_pm_episode_days,sce_heat_days,sce_total_exposure_days,pm_burden_ug_days,heat_burden_K_days,pm_extreme_episodes
-7,0,0,0,0,0,0.0,0.0,16
-14,0,0,0,0,0,0.0,0.0,16
-30,0,0,0,0,0,0.0,0.0,16
-45,0,0,0,0,0,0.0,0.0,16
-60,0,1,2,1,3,64.89926147460938,0.49255065917968466,16
-90,0,7,15,14,29,177.976806640625,31.191006469726418,16
