@@ -190,4 +190,3 @@ Hersbach, H., et al. (2020). The ERA5 global reanalysis. Quarterly Journal of th
 Contact
 
 Poornima Suthar Email: poornimajk2019@gmail.com GitHub: https://github.com/poornimasuthar
->>>>>>> 1a93362d6f4c1a4e374bd988680e73de1b6cd22f
