@@ -22,14 +22,16 @@ print("=" * 70)
 
 # PM2.5 - MERRA-2 daily (already spatially averaged, only 'time' dimension)
 print("\n[1.1] PM2.5 (MERRA-2)...")
-ds_pm = xr.open_dataset(out_dir / "pm25_daily_merra2_ahmedabad_2019.nc")
+ds_pm = xr.open_dataset(out_dir / "pm25_daily_cams_ahmedabad_2019.nc")
 print(f"    Variables: {list(ds_pm.data_vars)}")
 print(f"    Dimensions: {dict(ds_pm.dims)}")
 
 pm_var = 'pm25' if 'pm25' in ds_pm.data_vars else list(ds_pm.data_vars)[0]
 pm25 = ds_pm[pm_var]
+if 'latitude' in pm25.dims and 'longitude' in pm25.dims:
+    pm25 = pm25.mean(dim=['latitude', 'longitude'])
 
-#pandas conversion
+# pandas conversion
 pm25_daily = pm25.to_pandas()
 pm25_daily.index = pd.to_datetime(pm25_daily.index)
 print(f"    Loaded: {len(pm25_daily)} days, mean={pm25_daily.mean():.1f} ug/m3")
@@ -60,35 +62,39 @@ pm25_daily = pm25_daily.loc[common]
 tmax_daily = tmax_daily.loc[common]
 print(f"    Aligned: {len(common)} common days")
 
-#THRESHOLDS & HPE/SCE DETECTION
+# THRESHOLDS & HPE/SCE DETECTION
+# NOTE: standardized to 90th/90th percentile for BOTH variables to match
+# the _v2 SCE framework (31_standardized_hpe_sce_comparison_v2.py,
+# 32_disentangled_mortality_v2.py). Previously this used 75th/95th, which
+# produced SCE counts that disagreed with the standardized comparison.
 print("\n" + "=" * 70)
 print("STEP 2: COMPOUND EXTREME DETECTION")
 print("=" * 70)
 
-pm75 = pm25_daily.quantile(0.75)
-t95 = tmax_daily.quantile(0.95)
+pm90 = pm25_daily.quantile(0.90)
+t90 = tmax_daily.quantile(0.90)
 
-print(f"\n    PM2.5 75th percentile: {pm75:.1f} ug/m3")
-print(f"    Tmax 95th percentile: {t95:.1f} C")
+print(f"\n    PM2.5 90th percentile: {pm90:.1f} ug/m3")
+print(f"    Tmax 90th percentile: {t90:.1f} C")
 
-# Traditional HPE
-hpe_mask = (pm25_daily > pm75) & (tmax_daily > t95)
+# Traditional HPE (simultaneous)
+hpe_mask = (pm25_daily > pm90) & (tmax_daily > t90)
 hpe_days = hpe_mask.sum()
 hpe_dates = pm25_daily.index[hpe_mask].tolist()
 
-print(f"\n[2.1] Traditional HPE: {int(hpe_days)} days")
+print(f"\n[2.1] Traditional HPE (simultaneous, PM>90th AND T>90th same day): {int(hpe_days)} days")
 if hpe_dates:
     print(f"    Dates: {[str(d.date()) for d in hpe_dates]}")
 
 # SCE detection
-high_pm = pm25_daily[pm25_daily > pm75].index
-extreme_t = tmax_daily[tmax_daily > t95].index
+high_pm = pm25_daily[pm25_daily > pm90].index
+extreme_t = tmax_daily[tmax_daily > t90].index
 
-print(f"    High PM2.5 days: {len(high_pm)}")
-print(f"    Extreme temp days: {len(extreme_t)}")
+print(f"    High PM2.5 days (>90th): {len(high_pm)}")
+print(f"    Extreme temp days (>90th): {len(extreme_t)}")
 
 sce_results = {}
-for window in [15, 30, 60]:
+for window in [15, 30, 60, 90]:
     sce = 0
     sce_pairs = []
     for pm_date in high_pm:
@@ -138,8 +144,8 @@ master_summary = {
         "total_days": len(pm25_daily)
     },
     "thresholds": {
-        "pm75": float(pm75),
-        "t95": float(t95)
+        "pm90": float(pm90),
+        "t90": float(t90)
     },
     "compound_extremes": {
         "traditional_hpe_days": int(hpe_days),
@@ -147,10 +153,17 @@ master_summary = {
         "sce_15day": sce_results['sce_15']['count'],
         "sce_30day": sce_results['sce_30']['count'],
         "sce_60day": sce_results['sce_60']['count'],
+        "sce_90day": sce_results['sce_90']['count'],
         "soi_mean": soi_mean,
         "ceb": ceb
     },
-    "key_finding": f"Traditional HPE={int(hpe_days)} days vs SCE-30={sce_results['sce_30']['count']} events"
+    "key_finding": (
+        f"Traditional HPE (simultaneous)={int(hpe_days)} days vs "
+        f"SCE-90={sce_results['sce_90']['count']} events. "
+        f"Fixed 30-day window (SCE-30={sce_results['sce_30']['count']}) fails to capture "
+        f"Ahmedabad's inverse-seasonal lag structure; see the seasonal-window "
+        f"comparison (31_standardized_hpe_sce_comparison_v2.py) for the recommended framework."
+    )
 }
 
 with open(out_dir / "MASTER_SUMMARY.json", "w") as f:
@@ -162,8 +175,8 @@ timeline = pd.DataFrame({
     'date': pm25_daily.index,
     'pm25': pm25_daily.values,
     'tmax': tmax_daily.values,
-    'high_pm': pm25_daily > pm75,
-    'extreme_temp': tmax_daily > t95,
+    'high_pm': pm25_daily > pm90,
+    'extreme_temp': tmax_daily > t90,
     'hpe_day': hpe_mask
 })
 timeline.to_csv(out_dir / "complete_timeline_2019.csv", index=False)
@@ -183,22 +196,22 @@ print("\n[4.1] Figure 1: Complete time series...")
 fig, axes = plt.subplots(3, 1, figsize=(14, 10), sharex=True)
 
 axes[0].plot(timeline['date'], timeline['pm25'], 'b-', alpha=0.7, lw=0.8)
-axes[0].axhline(y=pm75, color='r', ls='--', alpha=0.7, label=f'75th percentile ({pm75:.1f})')
-axes[0].fill_between(timeline['date'], pm75, timeline['pm25'].max(), 
+axes[0].axhline(y=pm90, color='r', ls='--', alpha=0.7, label=f'90th percentile ({pm90:.1f})')
+axes[0].fill_between(timeline['date'], pm90, timeline['pm25'].max(),
                      where=timeline['high_pm'], alpha=0.2, color='blue', label='High PM2.5')
 axes[0].set_ylabel('PM2.5 (µg/m³)')
 axes[0].set_title('(a) Daily PM2.5 (MERRA-2)', fontweight='bold', loc='left')
 axes[0].legend(loc='upper right', fontsize=8)
 
 axes[1].plot(timeline['date'], timeline['tmax'], 'orange', alpha=0.7, lw=0.8)
-axes[1].axhline(y=t95, color='r', ls='--', alpha=0.7, label=f'95th percentile ({t95:.1f}°C)')
-axes[1].fill_between(timeline['date'], t95, timeline['tmax'].max(),
+axes[1].axhline(y=t90, color='r', ls='--', alpha=0.7, label=f'90th percentile ({t90:.1f}°C)')
+axes[1].fill_between(timeline['date'], t90, timeline['tmax'].max(),
                      where=timeline['extreme_temp'], alpha=0.2, color='orange', label='Extreme heat')
 axes[1].set_ylabel('Tmax (°C)')
 axes[1].set_title('(b) Daily Maximum Temperature (ERA5)', fontweight='bold', loc='left')
 axes[1].legend(loc='upper right', fontsize=8)
 
-axes[2].fill_between(timeline['date'], 0, 0.5, where=timeline['high_pm'], 
+axes[2].fill_between(timeline['date'], 0, 0.5, where=timeline['high_pm'],
                      alpha=0.3, color='blue', label=f'High PM2.5 (n={timeline["high_pm"].sum()})')
 axes[2].fill_between(timeline['date'], 0.5, 1, where=timeline['extreme_temp'],
                      alpha=0.3, color='orange', label=f'Extreme heat (n={timeline["extreme_temp"].sum()})')
@@ -206,7 +219,7 @@ hpe_y = np.where(timeline['hpe_day'], 0.75, np.nan)
 axes[2].scatter(timeline['date'], hpe_y, color='red', s=30, zorder=5, label=f'HPE days (n={int(hpe_days)})')
 axes[2].set_ylabel('Event')
 axes[2].set_xlabel('Date')
-axes[2].set_title(f'(c) Inverse Seasonality: Only {int(hpe_days)} HPE Days, But {sce_results["sce_30"]["count"]} SCE-30 Events', 
+axes[2].set_title(f'(c) Inverse Seasonality: Only {int(hpe_days)} HPE Days, But {sce_results["sce_90"]["count"]} SCE-90 Events',
                   fontweight='bold', loc='left')
 axes[2].legend(loc='upper right', fontsize=8)
 axes[2].set_ylim(0, 1)
@@ -253,24 +266,30 @@ print("    Saved: fig2_seasonal_cycle.png")
 print("[4.3] Figure 3: HPE vs SCE comparison...")
 fig, ax = plt.subplots(figsize=(10, 6))
 
-methods = ['Traditional HPE\n(Simultaneous)', 'SCE-15\n(2 weeks)', 'SCE-30\n(1 month)', 'SCE-60\n(2 months)']
-counts = [int(hpe_days), sce_results['sce_15']['count'], sce_results['sce_30']['count'], sce_results['sce_60']['count']]
-colors = ['coral', 'gold', 'steelblue', 'darkgreen']
+methods = ['Traditional HPE\n(Simultaneous)', 'SCE-15\n(2 weeks)', 'SCE-30\n(1 month)',
+           'SCE-60\n(2 months)', 'SCE-90\n(3 months)']
+counts = [int(hpe_days), sce_results['sce_15']['count'], sce_results['sce_30']['count'],
+          sce_results['sce_60']['count'], sce_results['sce_90']['count']]
+colors = ['coral', 'gold', 'steelblue', 'darkgreen', 'purple']
 
 bars = ax.bar(methods, counts, color=colors, edgecolor='black', width=0.6)
 for bar, val in zip(bars, counts):
-    ax.text(bar.get_x() + bar.get_width()/2, val + 0.5, f'{val}', 
+    ax.text(bar.get_x() + bar.get_width()/2, val + 0.5, f'{val}',
             ha='center', fontweight='bold', fontsize=14)
 
 ax.set_ylabel('Number of Events', fontweight='bold')
-ax.set_title('Compound Extreme Detection: Traditional vs Sequential Framework\nAhmedabad, 2019', 
+ax.set_title('Compound Extreme Detection: Traditional vs Sequential Framework\nAhmedabad, 2019',
              fontweight='bold', fontsize=12)
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
 
 if counts[0] > 0:
-    ratio = counts[2] / counts[0]
-    ax.text(0.5, max(counts)*0.9, f'SCE-30 detects {ratio:.1f}× more events\nthan traditional HPE', 
+    ratio = counts[4] / counts[0]
+    ax.text(0.5, max(counts)*0.9, f'SCE-90 detects {ratio:.1f}× more events\nthan traditional HPE',
+            ha='center', fontsize=11, style='italic',
+            bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+else:
+    ax.text(0.5, max(counts)*0.9, 'Traditional HPE finds 0 simultaneous events;\nSCE frameworks reveal the hidden risk',
             ha='center', fontsize=11, style='italic',
             bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
 
@@ -288,13 +307,13 @@ ax.plot(timeline['date'], timeline['pm25'], 'b-', alpha=0.5, lw=0.8, label='PM2.
 ax2.plot(timeline['date'], timeline['tmax'], 'orange', alpha=0.5, lw=0.8, label='Tmax')
 
 high_pm_dates = timeline[timeline['high_pm']]['date']
-ax.scatter(high_pm_dates, [pm75]*len(high_pm_dates), color='blue', s=20, alpha=0.5, zorder=5)
+ax.scatter(high_pm_dates, [pm90]*len(high_pm_dates), color='blue', s=20, alpha=0.5, zorder=5)
 
 extreme_t_dates = timeline[timeline['extreme_temp']]['date']
-ax2.scatter(extreme_t_dates, [t95]*len(extreme_t_dates), color='orange', s=20, alpha=0.5, zorder=5)
+ax2.scatter(extreme_t_dates, [t90]*len(extreme_t_dates), color='orange', s=20, alpha=0.5, zorder=5)
 
 for pm_date in high_pm:
-    window_end = pm_date + pd.Timedelta(days=30)
+    window_end = pm_date + pd.Timedelta(days=90)
     heat_in_window = extreme_t[(extreme_t > pm_date) & (extreme_t <= window_end)]
     if len(heat_in_window) > 0:
         pm_y = pm25_daily.loc[pm_date]
@@ -304,7 +323,7 @@ for pm_date in high_pm:
 ax.set_ylabel('PM2.5 (µg/m³)', color='blue')
 ax2.set_ylabel('Tmax (°C)', color='orange')
 ax.set_xlabel('Date')
-ax.set_title('SCE-30 Visualization: Winter Pollution → Summer Heat Connections', fontweight='bold')
+ax.set_title('SCE-90 Visualization: Winter Pollution → Summer Heat Connections', fontweight='bold')
 ax.legend(loc='upper left')
 ax2.legend(loc='upper right')
 
@@ -323,12 +342,12 @@ ax_text.axis('off')
 metrics_text = f"""
 AHMEDABAD 2019 - KEY FINDINGS
 
-PM2.5:        Mean={pm25_daily.mean():.1f} µg/m³  |  Max={pm25_daily.max():.1f}  |  Days >75th: {(pm25_daily>pm75).sum()}
-Temperature:  Mean={tmax_daily.mean():.1f}°C       |  Max={tmax_daily.max():.1f}°C  |  Days >95th: {(tmax_daily>t95).sum()}
+PM2.5:        Mean={pm25_daily.mean():.1f} µg/m³  |  Max={pm25_daily.max():.1f}  |  Days >90th: {(pm25_daily>pm90).sum()}
+Temperature:  Mean={tmax_daily.mean():.1f}°C       |  Max={tmax_daily.max():.1f}°C  |  Days >90th: {(tmax_daily>t90).sum()}
 
-TRADITIONAL HPE:  {int(hpe_days)} days  |  SCE-15: {sce_results['sce_15']['count']}  |  SCE-30: {sce_results['sce_30']['count']}  |  SCE-60: {sce_results['sce_60']['count']}
+TRADITIONAL HPE:  {int(hpe_days)} days  |  SCE-15: {sce_results['sce_15']['count']}  |  SCE-30: {sce_results['sce_30']['count']}  |  SCE-60: {sce_results['sce_60']['count']}  |  SCE-90: {sce_results['sce_90']['count']}
 
-SCE-30 detects {sce_results['sce_30']['count']/max(int(hpe_days),1):.1f}× more events than traditional HPE framework
+SCE-90 reveals {sce_results['sce_90']['count']} compound events that a simultaneous-day (HPE) framework entirely misses
 """
 ax_text.text(0.1, 0.5, metrics_text, fontsize=12, family='monospace', va='center')
 
@@ -345,29 +364,29 @@ ax2.set_xticks(range(1, 13))
 ax2.set_xticklabels(['J','F','M','A','M','J','J','A','S','O','N','D'])
 
 ax3 = fig.add_subplot(gs[1, 2])
-ax3.bar(['HPE', 'SCE-30'], [int(hpe_days), sce_results['sce_30']['count']], 
+ax3.bar(['HPE', 'SCE-90'], [int(hpe_days), sce_results['sce_90']['count']],
         color=['coral', 'steelblue'], edgecolor='black')
-ax3.set_title('HPE vs SCE-30')
-for i, v in enumerate([int(hpe_days), sce_results['sce_30']['count']]):
+ax3.set_title('HPE vs SCE-90')
+for i, v in enumerate([int(hpe_days), sce_results['sce_90']['count']]):
     ax3.text(i, v + 0.5, str(v), ha='center', fontweight='bold')
 
 ax4 = fig.add_subplot(gs[2, 0])
 ax4.hist(pm25_daily, bins=30, color='steelblue', alpha=0.7, edgecolor='black')
-ax4.axvline(x=pm75, color='r', ls='--', label='75th %ile')
+ax4.axvline(x=pm90, color='r', ls='--', label='90th %ile')
 ax4.set_title('PM2.5 Distribution')
 ax4.set_xlabel('PM2.5 (µg/m³)')
 
 ax5 = fig.add_subplot(gs[2, 1])
 ax5.hist(tmax_daily, bins=30, color='coral', alpha=0.7, edgecolor='black')
-ax5.axvline(x=t95, color='r', ls='--', label='95th %ile')
+ax5.axvline(x=t90, color='r', ls='--', label='90th %ile')
 ax5.set_title('Tmax Distribution')
 ax5.set_xlabel('Tmax (°C)')
 
 ax6 = fig.add_subplot(gs[2, 2])
 colors_month = timeline['date'].dt.month
 scatter = ax6.scatter(timeline['pm25'], timeline['tmax'], c=colors_month, cmap='jet', alpha=0.5, s=10)
-ax6.axvline(x=pm75, color='r', ls='--', alpha=0.5)
-ax6.axhline(y=t95, color='r', ls='--', alpha=0.5)
+ax6.axvline(x=pm90, color='r', ls='--', alpha=0.5)
+ax6.axhline(y=t90, color='r', ls='--', alpha=0.5)
 ax6.set_xlabel('PM2.5 (µg/m³)')
 ax6.set_ylabel('Tmax (°C)')
 ax6.set_title('PM2.5 vs Tmax (colored by month)')
@@ -377,6 +396,7 @@ plt.suptitle('Ahmedabad HPE Project 2019 - Summary Dashboard', fontsize=14, font
 plt.savefig(fig_dir / 'fig5_summary_dashboard.png', dpi=300, bbox_inches='tight')
 plt.close()
 print("    Saved: fig5_summary_dashboard.png")
+
 # STEP 5: FINAL SUMMARY
 print("\n" + "=" * 70)
 print("COMPLETE - ALL OUTPUTS GENERATED")
@@ -391,11 +411,13 @@ print("\n" + "=" * 70)
 print("KEY FINDING")
 print("=" * 70)
 print(f"""
-Traditional HPE framework:  {int(hpe_days)} days
-SCE-30 framework:           {sce_results['sce_30']['count']} events
-UNDERESTIMATION:            {sce_results['sce_30']['count']/max(int(hpe_days),1):.1f}x
+Traditional HPE framework (simultaneous, 90th/90th): {int(hpe_days)} days
+SCE-90 framework:                                    {sce_results['sce_90']['count']} events
+SCE-30 framework (fixed window, for reference):      {sce_results['sce_30']['count']} events
 
-The traditional framework misses {sce_results['sce_30']['count'] - int(hpe_days)} 
-compound extreme events in Ahmedabad's inverse-seasonal climate.
+The simultaneous-day framework misses compound risk that only appears
+when a lagged (sequential) window is used. See 31_standardized_hpe_sce_comparison_v2.py
+for the full comparison including the recommended seasonal-window definition.
 """)
 print("=" * 70)
+

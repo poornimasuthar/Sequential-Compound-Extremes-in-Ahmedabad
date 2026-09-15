@@ -1,31 +1,28 @@
 {
   "project": "Ahmedabad HPE 2019",
-  "date_generated": "2026-07-15 22:23:58.215812",
+  "date_generated": "2026-09-15 08:50:55.239570",
   "data": {
-    "pm25_annual_mean": 40.26196799082299,
-    "pm25_max": 94.19966888427734,
-    "pm25_min": 7.668664932250977,
+    "pm25_annual_mean": 77.6115493774414,
+    "pm25_max": 170.5653533935547,
+    "pm25_min": 30.282466888427734,
     "tmax_annual_mean": 33.19429397583008,
     "tmax_max": 43.69635009765625,
     "tmax_min": 22.44384765625,
     "total_days": 365
   },
   "thresholds": {
-    "pm75": 49.45889663696289,
-    "t95": 41.93302001953125
+    "pm90": 127.84017333984377,
+    "t90": 40.776553344726565
   },
   "compound_extremes": {
-    "traditional_hpe_days": 3,
-    "hpe_dates": [
-      "2019-04-28",
-      "2019-04-29",
-      "2019-06-07"
-    ],
-    "sce_15day": 7,
-    "sce_30day": 15,
-    "sce_60day": 26,
-    "soi_mean": 0.19807493334249593,
-    "ceb": 1.2743296745551542
+    "traditional_hpe_days": 0,
+    "hpe_dates": [],
+    "sce_15day": 0,
+    "sce_30day": 0,
+    "sce_60day": 2,
+    "sce_90day": 15,
+    "soi_mean": 0.25068140029907227,
+    "ceb": 1.2887109518051147
   },
-  "key_finding": "Traditional HPE=3 days vs SCE-30=15 events"
+  "key_finding": "Traditional HPE (simultaneous)=0 days vs SCE-90=15 events. Fixed 30-day window (SCE-30=0) fails to capture Ahmedabad's inverse-seasonal lag structure; see the seasonal-window comparison (31_standardized_hpe_sce_comparison_v2.py) for the recommended framework."
 }
